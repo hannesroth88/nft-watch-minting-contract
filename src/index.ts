@@ -12,11 +12,10 @@ const ETHERPRICE = 3500 // TODO get it from somewhere
 const DATE_TODAY = new Date()
 
 // MAIN FUNCTION
-
-let web3 = new Web3(Web3.givenProvider || `https://mainnet.infura.io/v3/${INFURAAPIKEY}`);
 start()
 
 async function start() {
+    let web3 = new Web3(Web3.givenProvider || `https://mainnet.infura.io/v3/${INFURAAPIKEY}`);
     var url = `https://api.etherscan.io/api?module=account&action=txlist&address=${CONTRACTADDRESS}&startblock=10000000&endblock=999999999&page=1&offset=${AMOUNT_TRANSACTION_SCANNED}&sort=desc&apikey=${ETHERSCANAPIKEY}`
     const res = await axios.get(url)
         .catch((error) => {
@@ -51,7 +50,7 @@ async function start() {
     for (const transactionBatch of transactionBatches) {
         i++
         console.log("##### Batch " + i + " ####");
-        
+
         var request = {
             params: {
                 addresses: transactionBatch,
@@ -73,7 +72,7 @@ async function start() {
                 if (totalUsdBalance > 100000) {
                     // get diffHours of an Account
                     console.log(`--> [${diffHrsArray}] Hours ago |  ${balanceRounded.toString()} USD (${Math.round(totalUsdBalance / ETHERPRICE)} ETH)|  MINT() ${ethAddress}`)
-                } 
+                }
             }
         })
     }
@@ -89,7 +88,7 @@ function getDiffHours(timeStamp: string) {
 
 function chunkArray(array, chunkSize) {
     return Array.from(
-      { length: Math.ceil(array.length / chunkSize) },
-      (_, index) => array.slice(index * chunkSize, (index + 1) * chunkSize)   
+        { length: Math.ceil(array.length / chunkSize) },
+        (_, index) => array.slice(index * chunkSize, (index + 1) * chunkSize)
     );
-  }
+}
