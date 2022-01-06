@@ -6,7 +6,8 @@ const CONTRACTADDRESS = "0x9C38Bc76f282EB881a387C04fB67e9fc60aECF78"
 const ETHERSCANAPIKEY = process.env.ETHERSCANAPIKEY
 const INFURAAPIKEY = process.env.INFURA_API_KEY
 const MINT_FUNCTION_HEX = "0xa0712d68"
-const AMOUNT_TRANSACTION_SCANNED = 100
+const AMOUNT_TRANSACTION_SCANNED = 500
+const ZAPPER_MAX_ADDRESSES = 15
 const ETHERPRICE = 3500 // TODO get it from somewhere
 const DATE_TODAY = new Date()
 
@@ -38,34 +39,44 @@ async function start() {
     var transactionsArray = transactions.map(transaction => {
         return transaction.from
     });
-
-    console.log(transactionsArray);
+    // reduce max elements
+    // transactionsArray = transactionsArray.slice(0, ZAPPER_MAX_ADDRESSES)
+    // console.log("get Balance of=" + transactionsArray.length);
 
     var url = `https://api.zapper.fi/v1/protocols/tokens/balances`
-    var request = {
-        params: {
-            addresses: transactionsArray,
-            api_key: "96e0cc51-a62e-42ca-acee-910ea7d2a241",
-            network: "ethereum",
-            newBalances: true
+
+    // Batch Requests
+    const transactionBatches = chunkArray(transactionsArray, ZAPPER_MAX_ADDRESSES);
+    var i = 0
+    for (const transactionBatch of transactionBatches) {
+        i++
+        console.log("##### Batch " + i + " ####");
+        
+        var request = {
+            params: {
+                addresses: transactionBatch,
+                api_key: "96e0cc51-a62e-42ca-acee-910ea7d2a241",
+                network: "ethereum",
+                newBalances: true
+            }
         }
-    }
-    await axios.get(url, request).then(res => {
-        var accountBalances = res.data
-        // for loop because of dynamic key in JSON
-        for (var ethAddress in accountBalances) {
-            var acc = accountBalances[ethAddress]
-            var totalUsdBalance = acc.meta[0].value;
-            if (totalUsdBalance > 10000) {
+        await axios.get(url, request).then(res => {
+            var accountBalances = res.data
+            // for loop because of dynamic key in JSON
+            for (var ethAddress in accountBalances) {
+                var acc = accountBalances[ethAddress]
+                var totalUsdBalance = acc.meta[0].value;
                 var balanceRounded = Math.round(totalUsdBalance) // round
-                // get diffHours of an Account
                 var diffHrsArray = resultEtherscan
                     .filter(trans => trans.from == ethAddress)
                     .map(trans => getDiffHours(trans.timeStamp))
-                console.log(`[${diffHrsArray}] Hours ago |  ${balanceRounded.toString()} USD (${Math.round(totalUsdBalance / ETHERPRICE)} ETH)|  MINT() ${ethAddress}`)
+                if (totalUsdBalance > 100000) {
+                    // get diffHours of an Account
+                    console.log(`--> [${diffHrsArray}] Hours ago |  ${balanceRounded.toString()} USD (${Math.round(totalUsdBalance / ETHERPRICE)} ETH)|  MINT() ${ethAddress}`)
+                } 
             }
-        }
-    })
+        })
+    }
 }
 
 function getDiffHours(timeStamp: string) {
@@ -75,3 +86,10 @@ function getDiffHours(timeStamp: string) {
     var diffHrs = Math.round((diffMs % 86400000) / 3600000 * 100) / 100; // hours, round 2 decimals
     return diffHrs;
 }
+
+function chunkArray(array, chunkSize) {
+    return Array.from(
+      { length: Math.ceil(array.length / chunkSize) },
+      (_, index) => array.slice(index * chunkSize, (index + 1) * chunkSize)   
+    );
+  }
